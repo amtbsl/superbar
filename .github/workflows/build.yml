@@ -1,0 +1,24 @@
+name: Build macOS app
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [arm64, x86_64]
+    env:
+      SUPERBAR_ARCH: ${{ matrix.architecture }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and verify Mach-O target, architecture, and signature
+        run: zsh scripts/build.sh
+      - name: Test pure logic and package the same compiled app
+        run: zsh scripts/release.sh --app "$PWD/build/Superbar.app" --output "$PWD/build/ci-releases"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Superbar-macos-${{ matrix.architecture }}
+          path: build/ci-releases/Superbar-*/
+          if-no-files-found: error
